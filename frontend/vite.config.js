@@ -12,6 +12,10 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
+  },
+  preview: {
+    // Allow Railway preview/production host
+    allowedHosts: ['ecgsignal.up.railway.app']
   }
 })
 
