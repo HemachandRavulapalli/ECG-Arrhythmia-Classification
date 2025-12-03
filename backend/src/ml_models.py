@@ -22,15 +22,17 @@ def prepare_features(X):
 # ------------------------
 def get_ml_models(num_classes):
     models = {
-        "SVM": SVC(kernel="rbf", probability=True, class_weight="balanced"),
+        "SVM": SVC(kernel="rbf", C=10.0, gamma="scale", probability=True, 
+                   class_weight="balanced", random_state=42),
         "RandomForest": RandomForestClassifier(
-            n_estimators=200, max_depth=None, class_weight="balanced", n_jobs=-1
+            n_estimators=500, max_depth=15, min_samples_split=5, min_samples_leaf=2,
+            class_weight="balanced", n_jobs=-1, random_state=42
         ),
-        "KNN": KNeighborsClassifier(n_neighbors=5),
+        "KNN": KNeighborsClassifier(n_neighbors=7, weights="distance", metric="euclidean"),
         "XGBoost": XGBClassifier(
-            n_estimators=300, max_depth=6, learning_rate=0.05, subsample=0.8,
+            n_estimators=500, max_depth=8, learning_rate=0.03, subsample=0.8,
             colsample_bytree=0.8, objective="multi:softprob", num_class=num_classes,
-            n_jobs=-1
+            n_jobs=-1, random_state=42, reg_alpha=0.1, reg_lambda=0.1
         )
     }
     return models

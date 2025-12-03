@@ -1,41 +1,116 @@
-from fastapi import FastAPI
-import numpy as np
-from src.preprocessing import preprocess_ecg
-from src.ml_models import predict_with_ml
-from src.cnn_models import predict_with_cnn
-from src.hybrid_model import hybrid_predict
-from src.data_loader import load_ecg_record
+#!/usr/bin/env python3
+"""
+FastAPI Backend for ECG Classification
+Handles PDF and image file uploads for ECG analysis
+"""
 
-app = FastAPI()
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import os
+import sys
+import tempfile
+import shutil
+from pathlib import Path
 
-CLASSES = ["Normal", "AFib", "Bradycardia", "Tachycardia", "Ventricular Arrhythmia"]
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+
+# Try to import predict_ecg, but handle missing dependencies gracefully
+try:
+    from predict_ecg import predict_ecg
+    PREDICTION_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Warning: Cannot import predict_ecg: {e}")
+    print("⚠️ Some dependencies may be missing. The API will start but /predict will return errors.")
+    PREDICTION_AVAILABLE = False
+    predict_ecg = None
+
+app = FastAPI(title="ECG Classification API", version="1.0.0")
+
+# CORS middleware for React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify your React app URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to ECG API 🚀"}
+    return {
+        "message": "Welcome to ECG Classification API 🚀",
+        "version": "1.0.0",
+        "endpoints": {
+            "/health": "Health check",
+            "/predict": "Upload ECG file (PDF or image) for classification"
+        }
+    }
+
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return {"status": "healthy", "service": "ECG Classification API"}
 
-@app.get("/predict")
-def predict_ecg(record: str = "100"):
-    # Load real ECG
-    signal, fs = load_ecg_record(record=record)
 
-    # Preprocess
-    processed = preprocess_ecg(signal, fs=fs)
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
+    """
+    Upload and classify an ECG file (PDF or image)
+    
+    Returns:
+        - predicted_class: The classified cardiac condition
+        - confidence: Confidence score (0-1)
+        - probabilities: Confidence scores for all classes
+    """
+    if not PREDICTION_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Prediction service unavailable. Missing dependencies. Please install all required packages from requirements.txt"
+        )
+    
+    # Validate file type
+    allowed_extensions = {".pdf", ".png", ".jpg", ".jpeg", ".tiff", ".bmp"}
+    file_extension = Path(file.filename).suffix.lower()
+    
+    if file_extension not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {file_extension}. Allowed types: {', '.join(allowed_extensions)}"
+        )
+    
+    # Save uploaded file temporarily
+    temp_file = None
+    try:
+        # Create temp file
+        suffix = Path(file.filename).suffix
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        
+        # Write uploaded content to temp file
+        content = await file.read()
+        temp_file.write(content)
+        temp_file.close()
+        
+        # Run prediction
+        print(f"📄 Processing file: {file.filename}")
+        result = predict_ecg(temp_file.name)
+        
+        return JSONResponse(content=result)
+        
+    except Exception as e:
+        print(f"❌ Error processing file: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+    
+    finally:
+        # Clean up temp file
+        if temp_file and os.path.exists(temp_file.name):
+            os.unlink(temp_file.name)
 
-    # Predictions
-    ml_pred, ml_conf = predict_with_ml(processed["filtered_signal"], CLASSES)
-    cnn_pred, cnn_conf = predict_with_cnn(processed["filtered_signal"], CLASSES)
-    final_pred, final_conf = hybrid_predict([ml_conf, cnn_conf], CLASSES)
 
-    return {
-        "record": record,
-        "ml_prediction": ml_pred,
-        "cnn_prediction": cnn_pred,
-        "final_prediction": final_pred,
-        "confidence": final_conf,
-        "imf_count": len(processed["imfs"])
-    }
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

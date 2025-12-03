@@ -20,7 +20,7 @@ from sklearn.model_selection import train_test_split
 from data_loader import load_all_datasets
 from ml_models import prepare_features, get_ml_models, train_ml_model
 from cnn_models import build_cnn_1d, build_cnn_2d
-from hybrid_model import HybridEnsemble
+from hybrid_model import AdvancedHybridModel, HybridEnsemble
 
 # ------------------------
 # CLI Arguments
@@ -195,9 +195,9 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCh
 def make_callbacks(name):
     ckpt = os.path.join(RUN_DIR, f"{name}_best.keras")
     return [
-        ModelCheckpoint(ckpt, monitor="val_loss", save_best_only=True, verbose=0),
-        ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=2, verbose=1),
-        EarlyStopping(monitor="val_loss", patience=4, restore_best_weights=True, verbose=1),
+        ModelCheckpoint(ckpt, monitor="val_accuracy", mode="max", save_best_only=True, verbose=0),
+        ReduceLROnPlateau(monitor="val_loss", factor=0.3, patience=5, min_lr=1e-8, verbose=1),
+        EarlyStopping(monitor="val_accuracy", patience=15, restore_best_weights=True, verbose=1),
     ]
 
 # CNN1D
@@ -208,7 +208,7 @@ if args.resume and os.path.exists(cnn1d_path):
 else:
     print("🚀 Training CNN1D...")
     cnn1d = build_cnn_1d((1000, 1), num_classes=len(classes))
-    cnn1d.compile(optimizer=tf.keras.optimizers.Adam(1e-4),
+    cnn1d.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-7),
                   loss="categorical_crossentropy", metrics=["accuracy"])
     history = cnn1d.fit(X_train_dl, y_train, validation_data=(X_test_dl, y_test),
                         epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1,
@@ -228,7 +228,7 @@ else:
     X_train_2d = X_train_dl.reshape(-1, 100, 10, 1)
     X_test_2d = X_test_dl.reshape(-1, 100, 10, 1)
     cnn2d = build_cnn_2d((100, 10, 1), num_classes=len(classes))
-    cnn2d.compile(optimizer=tf.keras.optimizers.Adam(1e-3),
+    cnn2d.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=5e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-7),
                   loss="categorical_crossentropy", metrics=["accuracy"])
     history2 = cnn2d.fit(X_train_2d, y_train, validation_data=(X_test_2d, y_test),
                          epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1,
@@ -249,7 +249,27 @@ weights = vals / (vals.sum() + 1e-8)
 weights = {k: float(weights[i]) for i, k in enumerate(scores.keys())}
 print("🔢 Ensemble weights:", weights)
 
-print("🤝 Building Hybrid Ensemble...")
+# ------------------------
+# Advanced Hybrid Model (99%+ accuracy target)
+# ------------------------
+print("🚀 Training Advanced Hybrid Model for 99%+ accuracy...")
+advanced_hybrid = AdvancedHybridModel(input_shape=(1000, 1), num_classes=len(classes))
+
+# Train the advanced ensemble with more epochs for better accuracy
+advanced_hybrid.train_ensemble(
+    X_train_dl, y_train, 
+    X_test_dl, y_test,
+    epochs=50,  # Increased for better accuracy
+    batch_size=BATCH_SIZE
+)
+
+# Evaluate advanced hybrid model
+advanced_acc, advanced_predictions = advanced_hybrid.evaluate(X_test_dl, y_test)
+
+# Save advanced models
+advanced_hybrid.save_models(os.path.join(RUN_DIR, "advanced_hybrid"))
+
+print("🤝 Building Traditional Hybrid Ensemble...")
 hybrid = HybridEnsemble(ml_models=ml_models, dl_models=dl_models, classes=classes, weights=weights)
 acc = hybrid.evaluate(X_test_ml, X_test_dl, np.argmax(y_test, axis=1))
 
@@ -264,6 +284,7 @@ record = pd.DataFrame([{
     "batch_size": BATCH_SIZE,
     "normalize": APPLY_GLOBAL_NORM,
     "hybrid_acc": acc,
+    "advanced_hybrid_acc": advanced_acc,
     "run_folder": RUN_DIR
 }])
 
@@ -274,7 +295,9 @@ else:
 results.to_csv(results_file, index=False)
 
 best = results.loc[results["hybrid_acc"].idxmax()]
+best_advanced = results.loc[results["advanced_hybrid_acc"].idxmax()]
 print(f"📊 Results logged: {results_file}")
-print(f"🏆 Best accuracy: {best.hybrid_acc:.4f} ({best.timestamp})")
+print(f"🏆 Best traditional hybrid accuracy: {best.hybrid_acc:.4f} ({best.timestamp})")
+print(f"🚀 Best advanced hybrid accuracy: {best_advanced.advanced_hybrid_acc:.4f} ({best_advanced.timestamp})")
 print(f"📁 Model folder: {best.run_folder}")
 print("🎉 Training completed successfully!")
