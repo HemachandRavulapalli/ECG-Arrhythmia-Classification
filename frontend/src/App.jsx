@@ -35,36 +35,34 @@ function App() {
         body: formData,
       })
 
-      if (!response.ok) {
-        // Try to parse JSON error; fall back to text if body is empty / not JSON
-        let message = 'Failed to process ECG'
+      // Read body ONCE as text and then interpret
+      const rawText = await response.text()
+
+      // Try to parse JSON if there is any body
+      let parsed = null
+      if (rawText) {
         try {
-          const errorData = await response.json()
-          if (errorData && typeof errorData === 'object') {
-            message = errorData.detail || JSON.stringify(errorData)
-          }
+          parsed = JSON.parse(rawText)
         } catch {
-          const text = await response.text()
-          if (text) message = text
+          // Not valid JSON, keep parsed = null
+        }
+      }
+
+      if (!response.ok) {
+        let message = 'Failed to process ECG'
+        if (parsed && typeof parsed === 'object') {
+          message = parsed.detail || JSON.stringify(parsed)
+        } else if (rawText) {
+          message = rawText
         }
         throw new Error(message)
       }
 
-      // Safely handle success response: prefer JSON, fall back to text
-      let data = null
-      try {
-        data = await response.json()
-      } catch {
-        const text = await response.text()
-        if (!text) {
-          throw new Error('Server returned an empty response')
-        }
-        try {
-          data = JSON.parse(text)
-        } catch {
-          throw new Error(`Server returned non-JSON response: ${text}`)
-        }
+      if (!parsed) {
+        throw new Error(rawText || 'Server returned an empty response')
       }
+
+      const data = parsed
       setResult(data)
     } catch (err) {
       setError(err.message || 'An error occurred during classification')
