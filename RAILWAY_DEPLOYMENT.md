@@ -113,8 +113,9 @@ But the **two-service approach is recommended** for better separation.
 - Check browser console for CORS errors
 - Verify backend URL is accessible
 
-### Build fails
-- Check that all dependencies are in `requirements.txt` (backend) or `package.json` (frontend)
+-### Build fails
+- Backend: Ensure `requirements.deploy.txt` exists (lightweight runtime dependencies) and heavy training deps stay in `requirements.txt`
+- Frontend: Confirm dependencies in `package.json`
 - Check Railway logs for specific error messages
 
 ### Port errors

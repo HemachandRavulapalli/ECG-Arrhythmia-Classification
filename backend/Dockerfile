@@ -3,12 +3,12 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Copy lightweight deployment requirements for faster installs
+COPY requirements.deploy.txt ./requirements.deploy.txt
 
-# Install dependencies
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+# Install dependencies needed for serving predictions
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install -r requirements.deploy.txt
 
 # Copy application code
 COPY . .
@@ -17,5 +17,5 @@ COPY . .
 EXPOSE 8000
 
 # Start command
-CMD ["python", "app.py"]
+CMD ["python3", "app.py"]
 
