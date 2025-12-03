@@ -29,18 +29,42 @@ function App() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
       const response = await fetch(`${apiUrl}/predict`, {
         method: 'POST',
         body: formData,
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to process ECG')
+        // Try to parse JSON error; fall back to text if body is empty / not JSON
+        let message = 'Failed to process ECG'
+        try {
+          const errorData = await response.json()
+          if (errorData && typeof errorData === 'object') {
+            message = errorData.detail || JSON.stringify(errorData)
+          }
+        } catch {
+          const text = await response.text()
+          if (text) message = text
+        }
+        throw new Error(message)
       }
 
-      const data = await response.json()
+      // Safely handle success response: prefer JSON, fall back to text
+      let data = null
+      try {
+        data = await response.json()
+      } catch {
+        const text = await response.text()
+        if (!text) {
+          throw new Error('Server returned an empty response')
+        }
+        try {
+          data = JSON.parse(text)
+        } catch {
+          throw new Error(`Server returned non-JSON response: ${text}`)
+        }
+      }
       setResult(data)
     } catch (err) {
       setError(err.message || 'An error occurred during classification')
