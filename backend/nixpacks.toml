@@ -3,9 +3,10 @@ nixPkgs = ["python310"]
 
 [phases.install]
 cmds = [
-  "pip install --upgrade pip",
-  "pip install -r requirements.txt"
+  "python3 -m ensurepip --upgrade",
+  "python3 -m pip install --upgrade pip setuptools wheel",
+  "python3 -m pip install -r requirements.txt"
 ]
 
 [start]
-cmd = "python app.py"
+cmd = "python3 app.py"
