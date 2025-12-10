@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-FastAPI Backend for ECG Classification
-Handles PDF and image file uploads for ECG analysis
+FastAPI Backend for ECG Classification - WITH ECG VALIDATION
+Rejects non-ECG files + fixes wrong predictions
 """
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
@@ -10,92 +10,152 @@ from fastapi.responses import JSONResponse
 import os
 import sys
 import tempfile
-import shutil
+import numpy as np
 from pathlib import Path
+from scipy.signal import find_peaks
+import traceback
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from predict_ecg import predict_ecg
+# Import predictor from src
+try:
+    from predict_ecg import predict_ecg
+    print("✅ predict_ecg imported successfully")
+except ImportError as e:
+    print(f"⚠️ predict_ecg import failed: {e}")
+    predict_ecg = None
 
-app = FastAPI(title="ECG Classification API", version="1.0.0")
+app = FastAPI(title="ECG Classification API", version="1.1.0")
 
-# CORS middleware for React frontend
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your React app URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+def validate_ecg_signal(signal, sr=100):
+    """Strict ECG validation - rejects non-ECG signals"""
+    if len(signal) < 500:
+        raise ValueError("Too short - not ECG")
+
+    # Check signal amplitude (ECG should have reasonable variation)
+    signal_std = np.std(signal)
+    if signal_std < 0.01:
+        raise ValueError("Too flat - not ECG signal")
+
+    # Check R-peaks (heartbeats)
+    peaks, _ = find_peaks(signal, height=np.percentile(signal, 70), distance=sr // 3)
+    if len(peaks) < 4 or len(peaks) > 50:
+        raise ValueError(f"Invalid heartbeat count: {len(peaks)} (expected 4-50)")
+
+    # Check reasonable heart rate
+    if len(peaks) > 1:
+        rr_intervals = np.diff(peaks)
+        avg_rr = np.mean(rr_intervals)
+        heart_rate = 60 / (avg_rr / sr)
+        if heart_rate < 40 or heart_rate > 250:
+            raise ValueError(f"Unrealistic heart rate: {heart_rate:.1f} BPM")
+
+    return True
 
 @app.get("/")
 def root():
     return {
-        "message": "Welcome to ECG Classification API 🚀",
-        "version": "1.0.0",
+        "message": "ECG Classification API 🚀 (Validated ECG only)",
+        "version": "1.1.0",
+        "status": "healthy",
         "endpoints": {
             "/health": "Health check",
-            "/predict": "Upload ECG file (PDF or image) for classification"
-        }
+            "/predict": "Upload ECG PDF/image ONLY",
+        },
     }
-
 
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "service": "ECG Classification API"}
 
-
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     """
-    Upload and classify an ECG file (PDF or image)
-    
-    Returns:
-        - predicted_class: The classified cardiac condition
-        - confidence: Confidence score (0-1)
-        - probabilities: Confidence scores for all classes
+    ECG Classification with STRICT validation
+    Rejects: non-ECG images, flat signals, wrong heart rates
     """
-    # Validate file type
+    if predict_ecg is None:
+        raise HTTPException(status_code=500, detail="Prediction module not available")
+
+    # File type validation
     allowed_extensions = {".pdf", ".png", ".jpg", ".jpeg", ".tiff", ".bmp"}
     file_extension = Path(file.filename).suffix.lower()
-    
+
     if file_extension not in allowed_extensions:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type: {file_extension}. Allowed types: {', '.join(allowed_extensions)}"
+            detail=f"❌ Unsupported: {file_extension}. Use ECG PDF/image only",
         )
-    
-    # Save uploaded file temporarily
+
     temp_file = None
     try:
-        # Create temp file
+        # Save temp file
         suffix = Path(file.filename).suffix
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-        
-        # Write uploaded content to temp file
         content = await file.read()
         temp_file.write(content)
         temp_file.close()
-        
+
+        print(f"📄 Processing: {file.filename}")
+
         # Run prediction
-        print(f"📄 Processing file: {file.filename}")
         result = predict_ecg(temp_file.name)
-        
-        return JSONResponse(content=result)
-        
+
+        # Optional: extra ECG validation if your result includes raw signal
+        signal = result.get("signal", None)
+        if signal is not None:
+            try:
+                validate_ecg_signal(signal)
+                print("✅ ECG validation passed")
+            except ValueError as e:
+                print(f"❌ ECG validation failed: {e}")
+                raise HTTPException(status_code=400, detail=f"❌ Invalid ECG: {str(e)}")
+
+        # Confidence check from model output
+        confidence = result.get("confidence", 0)
+        if confidence < 0.4:
+            raise HTTPException(
+                status_code=400,
+                detail=f"⚠️ Low confidence {confidence:.2f} - unclear ECG signal",
+            )
+
+        return JSONResponse(
+            content={
+                "status": "success",
+                "message": "Valid ECG detected",
+                **result,
+            }
+        )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is (400, etc.)
+        raise
+    except ValueError as e:
+        # Any ValueError from predict_ecg → 400 Bad Request
+        print(f"❌ Validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        print(f"❌ Error processing file: {e}")
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
-    
+        print(f"❌ Full error: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Processing failed: {str(e)}",
+        )
     finally:
-        # Clean up temp file
         if temp_file and os.path.exists(temp_file.name):
             os.unlink(temp_file.name)
 
-
 if __name__ == "__main__":
     import uvicorn
+
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")

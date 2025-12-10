@@ -1,21 +1,11 @@
 # hybrid_model.py
 import numpy as np
-import joblib
+import tensorflow as tf
+from tensorflow.keras import layers, models, regularizers, initializers
+from sklearn.ensemble import VotingClassifier
 from sklearn.metrics import accuracy_score, classification_report
+import joblib
 
-# Try to import tensorflow, but handle if missing
-try:
-    import tensorflow as tf
-    from tensorflow.keras import layers, models, regularizers, initializers
-    TENSORFLOW_AVAILABLE = True
-except ImportError:
-    TENSORFLOW_AVAILABLE = False
-    tf = None
-    layers = None
-    models = None
-    regularizers = None
-    initializers = None
-    print("⚠️ Warning: TensorFlow not available. AdvancedHybridModel will not work, but HybridEnsemble can use ML models only.")
 
 class AdvancedHybridModel:
     """
@@ -207,11 +197,15 @@ class AdvancedHybridModel:
         return models
     
     def _build_attention_cnn_2d(self):
-        """2D CNN with attention mechanism"""
-        inputs = layers.Input(shape=self.input_shape)
+        """2D CNN with attention mechanism - FIXED"""
+        # Start from the same 1D input shape
+        base_inputs = layers.Input(shape=self.input_shape)   # (1000, 1)
+        
+        # Reshape to 2D representation, consistent with train_ensemble
+        x = layers.Reshape((100, 10, 1))(base_inputs)        # (100, 10, 1)
         
         # Feature extraction
-        x = layers.Conv2D(64, (5, 5), padding='same', activation='relu')(inputs)
+        x = layers.Conv2D(64, (5, 5), padding='same', activation='relu')(x)
         x = layers.BatchNormalization()(x)
         x = layers.MaxPooling2D((2, 2))(x)
         
@@ -222,9 +216,9 @@ class AdvancedHybridModel:
         x = layers.Conv2D(256, (3, 3), padding='same', activation='relu')(x)
         x = layers.BatchNormalization()(x)
         
-        # Attention mechanism
+        # Attention mechanism (channel-wise)
         attention = layers.GlobalAveragePooling2D()(x)
-        attention = layers.Dense(256//4, activation='relu')(attention)
+        attention = layers.Dense(256 // 4, activation='relu')(attention)
         attention = layers.Dense(256, activation='sigmoid')(attention)
         attention = layers.Reshape((1, 1, 256))(attention)
         x = layers.Multiply()([x, attention])
@@ -236,7 +230,7 @@ class AdvancedHybridModel:
         x = layers.Dropout(0.3)(x)
         outputs = layers.Dense(self.num_classes, activation='softmax')(x)
         
-        model = models.Model(inputs, outputs)
+        model = models.Model(base_inputs, outputs)
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
             loss='categorical_crossentropy',
@@ -245,13 +239,17 @@ class AdvancedHybridModel:
         return model
     
     def _build_multiscale_cnn_2d(self):
-        """Multi-scale 2D CNN"""
-        inputs = layers.Input(shape=self.input_shape)
+        """Multi-scale 2D CNN - FIXED"""
+        # Start from the same 1D input shape
+        base_inputs = layers.Input(shape=self.input_shape)   # (1000, 1)
+        
+        # Reshape to 2D representation, consistent with train_ensemble
+        x_in = layers.Reshape((100, 10, 1))(base_inputs)     # (100, 10, 1)
         
         # Multi-scale feature extraction
         branches = []
         for kernel_size in [(3, 3), (5, 5), (7, 7)]:
-            branch = layers.Conv2D(64, kernel_size, padding='same', activation='relu')(inputs)
+            branch = layers.Conv2D(64, kernel_size, padding='same', activation='relu')(x_in)
             branch = layers.BatchNormalization()(branch)
             branch = layers.MaxPooling2D((2, 2))(branch)
             branch = layers.Conv2D(128, kernel_size, padding='same', activation='relu')(branch)
@@ -268,7 +266,7 @@ class AdvancedHybridModel:
         x = layers.Dropout(0.3)(x)
         outputs = layers.Dense(self.num_classes, activation='softmax')(x)
         
-        model = models.Model(inputs, outputs)
+        model = models.Model(base_inputs, outputs)
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
             loss='categorical_crossentropy',
@@ -297,16 +295,13 @@ class AdvancedHybridModel:
             )
             self.models[f'cnn1d_{name}'] = model
         
-        # Train 2D CNN ensemble
-        X_train_2d = X_train.reshape(-1, 100, 10, 1)
-        X_val_2d = X_val.reshape(-1, 100, 10, 1)
-        
+        # Train 2D CNN ensemble - NOW WORKS WITH SAME X_train!
         cnn2d_models = self.build_ensemble_cnn_2d()
         for name, model in cnn2d_models.items():
             print(f"Training {name}...")
             model.fit(
-                X_train_2d, y_train,
-                validation_data=(X_val_2d, y_val),
+                X_train, y_train,  # No reshape needed anymore!
+                validation_data=(X_val, y_val),
                 epochs=epochs,
                 batch_size=batch_size,
                 verbose=1,
@@ -327,11 +322,10 @@ class AdvancedHybridModel:
                 pred = model.predict(X_test, verbose=0)
                 predictions.append(pred)
         
-        # 2D CNN predictions
-        X_test_2d = X_test.reshape(-1, 100, 10, 1)
+        # 2D CNN predictions - NOW WORKS WITH SAME X_test!
         for name, model in self.models.items():
             if name.startswith('cnn2d_'):
-                pred = model.predict(X_test_2d, verbose=0)
+                pred = model.predict(X_test, verbose=0)  # No reshape needed!
                 predictions.append(pred)
         
         # Weighted ensemble prediction
@@ -372,17 +366,14 @@ class HybridEnsemble:
             except Exception as e:
                 print(f"⚠️ Error predicting with {name}: {e}")
         
-        # DL model predictions (only if TensorFlow is available)
-        if TENSORFLOW_AVAILABLE:
-            for name, model in self.dl_models.items():
-                try:
-                    proba = model.predict(X_dl, verbose=0)
-                    predictions.append(proba)
-                    weights_list.append(self.weights.get(name, 1.0))
-                except Exception as e:
-                    print(f"⚠️ Error predicting with {name}: {e}")
-        elif self.dl_models:
-            print("⚠️ TensorFlow not available, skipping DL model predictions")
+        # DL model predictions
+        for name, model in self.dl_models.items():
+            try:
+                proba = model.predict(X_dl, verbose=0)
+                predictions.append(proba)
+                weights_list.append(self.weights.get(name, 1.0))
+            except Exception as e:
+                print(f"⚠️ Error predicting with {name}: {e}")
         
         if not predictions:
             raise ValueError("❌ No models available for prediction")
@@ -413,10 +404,10 @@ class HybridEnsemble:
         probs = self.predict_proba(X_ml, X_dl)
         y_pred = np.argmax(probs, axis=1)
             
-            accuracy = accuracy_score(y_true, y_pred)
-            print(f"🎯 Ensemble Accuracy: {accuracy:.4f}")
-            print("\nClassification Report:")
-            print(classification_report(y_true, y_pred))
+        accuracy = accuracy_score(y_true, y_pred)
+        print(f"🎯 Ensemble Accuracy: {accuracy:.4f}")
+        print("\nClassification Report:")
+        print(classification_report(y_true, y_pred))
             
         return accuracy, probs
     
@@ -425,17 +416,11 @@ class HybridEnsemble:
         import os
         os.makedirs(save_dir, exist_ok=True)
         
-        # Save DL models (only if TensorFlow is available)
-        if TENSORFLOW_AVAILABLE:
-            for name, model in self.dl_models.items():
-                try:
-                    model_path = os.path.join(save_dir, f"{name}.keras")
-                    model.save(model_path)
-                    print(f"💾 Saved DL model {name} to {model_path}")
-                except Exception as e:
-                    print(f"⚠️ Failed to save DL model {name}: {e}")
-        else:
-            print("⚠️ TensorFlow not available, skipping DL model saving")
+        # Save DL models
+        for name, model in self.dl_models.items():
+            model_path = os.path.join(save_dir, f"{name}.keras")
+            model.save(model_path)
+            print(f"💾 Saved DL model {name} to {model_path}")
 
         # Save ML models
         for name, model in self.ml_models.items():
@@ -451,19 +436,13 @@ class HybridEnsemble:
         import os
         import glob
         
-        # Load DL models (only if TensorFlow is available)
-        if TENSORFLOW_AVAILABLE:
-            model_files = glob.glob(os.path.join(save_dir, "*.keras"))
-            for model_file in model_files:
-                name = os.path.basename(model_file).replace('.keras', '')
-                try:
-                    model = tf.keras.models.load_model(model_file)
-                    self.dl_models[name] = model
-                    print(f"📂 Loaded DL model {name} from {model_file}")
-                except Exception as e:
-                    print(f"⚠️ Failed to load DL model {model_file}: {e}")
-        else:
-            print("⚠️ TensorFlow not available, skipping DL model loading")
+        # Load DL models
+        model_files = glob.glob(os.path.join(save_dir, "*.keras"))
+        for model_file in model_files:
+            name = os.path.basename(model_file).replace('.keras', '')
+            model = tf.keras.models.load_model(model_file)
+            self.dl_models[name] = model
+            print(f"📂 Loaded DL model {name} from {model_file}")
 
         # Load ML models
         joblib_files = glob.glob(os.path.join(save_dir, "*.joblib"))

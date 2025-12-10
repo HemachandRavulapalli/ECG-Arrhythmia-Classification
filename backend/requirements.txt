@@ -25,6 +25,6 @@ pdf2image
 pdfplumber
 joblib
 requests
-opencv-python
 pymupdf
-matplotlib
+pytesseract
+PyPDF2

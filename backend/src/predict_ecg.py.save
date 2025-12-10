@@ -1,0 +1,242 @@
+# backend/src/predict_ecg.py
+import os
+import sys
+import numpy as np
+import joblib
+import json
+from pathlib import Path
+
+try:
+    from pdf_to_signal import extract_signal_from_file
+except ImportError as e:
+    print(f"⚠️ Warning: Cannot import pdf_to_signal: {e}")
+    extract_signal_from_file = None
+
+try:
+    from hybrid_model import HybridEnsemble
+    HYBRID_ENSEMBLE_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Warning: Cannot import HybridEnsemble: {e}")
+    HybridEnsemble = None
+    HYBRID_ENSEMBLE_AVAILABLE = False
+
+# ------------------------
+# Label map (5 target classes)
+# ------------------------
+LABEL_MAP = {
+    "Class_0": "Normal Sinus Rhythm",
+    "Class_1": "Atrial Fibrillation",
+    "Class_2": "Bradycardia",
+    "Class_3": "Tachycardia",
+    "Class_4": "Ventricular Arrhythmias"
+}
+
+BASE_DIR = os.path.dirname(__file__)
+MODEL_DIR = os.environ.get("MODEL_DIR", os.path.join(BASE_DIR, "saved_models"))
+
+def get_latest_run():
+    """Get most recent training run"""
+    runs = sorted(
+        [os.path.join(MODEL_DIR, d) for d in os.listdir(MODEL_DIR) if d.startswith("run_")],
+        key=os.path.getmtime,
+    )
+    return runs[-1] if runs else None
+
+def load_models(run_dir):
+    """Load ALL models - TensorFlow imported HERE to avoid early failure"""
+    
+    # ✅ CRITICAL: Import TensorFlow INSIDE function
+    try:
+        import tensorflow as tf
+        TF_AVAILABLE = True
+        print("✅ TensorFlow loaded in load_models()")
+    except ImportError as e:
+        print(f"❌ TensorFlow import failed: {e}")
+        TF_AVAILABLE = False
+        tf = None
+    
+    ml_models = {}
+    dl_models = {}
+    
+    print(f"📂 Scanning models in: {run_dir}")
+    
+    # ✅ PRIORITY 1: Load *_best.keras first (most reliable)
+    best_files = sorted(
+        [f for f in os.listdir(run_dir) if f.endswith('_best.keras')],
+        key=lambda x: os.path.getmtime(os.path.join(run_dir, x)), reverse=True
+    )
+    
+    # ✅ PRIORITY 2: Regular .keras files
+    regular_files = [f for f in os.listdir(run_dir) if f.endswith('.keras') and '_best' not in f]
+    
+    # ✅ PRIORITY 3: ML models (.joblib)
+    joblib_files = [f for f in os.listdir(run_dir) if f.endswith('.joblib')]
+    
+    all_files = best_files + regular_files + joblib_files
+    
+    for f in all_files:
+        file_path = os.path.join(run_dir, f)
+        
+        if f.endswith(".joblib"):
+            name = f.replace(".joblib", "")
+            try:
+                ml_models[name] = joblib.load(file_path)
+                print(f"✅ Loaded ML model: {name}")
+            except Exception as e:
+                print(f"⚠️ Skipping ML {f}: {e}")
+                continue
+                
+        elif f.endswith(".keras") or f.endswith(".h5"):
+            if not TF_AVAILABLE or tf is None:
+                print(f"⚠️ Skipping DL {f}: TensorFlow not available")
+                continue
+                
+            # ✅ FIXED: Proper name cleaning + .upper()
+            name = Path(f).stem.replace("_best", "").upper()
+            
+            try:
+                # ✅ FIXED: Custom objects for hybrid CNN layers
+                model = tf.keras.models.load_model(
+                    file_path,
+                    safe_mode=False,  # ✅ Disable safe mode for compatibility
+                    custom_objects={
+                        'Add': tf.keras.layers.Add,
+                        'Multiply': tf.keras.layers.Multiply,
+                        'Concatenate': tf.keras.layers.Concatenate,
+                        'Reshape': tf.keras.layers.Reshape
+                    }
+                )
+                dl_models[name] = model
+                print(f"✅ Loaded DL model: {name} ({f})")
+            except Exception as e:
+                print(f"⚠️ Detailed DL error {f}: {str(e)[:100]}...")
+                # Fallback: try without custom objects
+                try:
+                    model = tf.keras.models.load_model(file_path, safe_mode=False)
+                    dl_models[name] = model
+                    print(f"✅ Loaded DL (fallback): {name}")
+                except Exception as e2:
+                    print(f"❌ Final DL fail {f}: {str(e2)[:80]}")
+                    continue
+    
+    print(f"📦 Loaded ML models: {list(ml_models.keys())}")
+    print(f"📦 Loaded DL models: {list(dl_models.keys())}")
+    return ml_models, dl_models
+
+def validate_input_signal(signal):
+    """Enhanced ECG validation"""
+    if signal is None or len(signal) == 0:
+        raise ValueError("❌ Empty signal extracted.")
+    
+    if np.std(signal) < 0.05 or (np.max(signal) - np.min(signal)) < 0.5:
+        raise ValueError("❌ Signal lacks ECG-like variation (too flat).")
+    
+    nonzero_ratio = np.count_nonzero(signal) / len(signal)
+    if nonzero_ratio < 0.05:
+        raise ValueError("❌ Signal appears blank/non-ECG (too many zero values).")
+    
+    mean_step = np.mean(np.abs(np.diff(signal)))
+    if mean_step < 1e-3:
+        raise ValueError("❌ Signal changes too small for ECG.")
+
+def predict_ecg(pdf_path):
+    if extract_signal_from_file is None:
+        raise ValueError("❌ PDF signal extraction not available.")
+    
+    if not HYBRID_ENSEMBLE_AVAILABLE or HybridEnsemble is None:
+        raise ValueError("❌ Hybrid ensemble not available.")
+    
+    print("📄 Converting PDF → ECG signal...")
+    signal = extract_signal_from_file(pdf_path)
+    if signal is None:
+        raise ValueError("❌ Could not extract signal from PDF")
+    
+    # Validate ECG signal
+    validate_input_signal(signal)
+    
+    # Standardize to 1000 samples
+    orig_len = len(signal)
+    target_len = 1000
+    
+    if orig_len != target_len:
+        if orig_len < target_len:
+            signal = np.pad(signal, (0, target_len - orig_len), mode='constant')
+        else:
+            signal = signal[:target_len]
+        print(f"📏 Signal: {orig_len} → {target_len} samples")
+    
+    # Z-score normalization
+    signal = (signal - np.mean(signal)) / (np.std(signal) + 1e-8)
+    
+    # Prepare inputs
+    X_ml = signal.reshape(1, -1)
+    X_dl = signal.reshape(1, 1000, 1)
+    
+    # Load models from latest run
+    best_run = get_latest_run()
+    if best_run is None:
+        raise ValueError("❌ No trained models found. Run training first.")
+    
+    print(f"📂 Loading models from: {Path(best_run).name}")
+    ml_models, dl_models = load_models(best_run)
+    
+    if not ml_models and not dl_models:
+        raise ValueError("❌ No models loaded. Check saved_models/")
+    
+    # Use saved classes or default
+    classes = ["Normal Sinus Rhythm", "Atrial Fibrillation", "Bradycardia", "Tachycardia", "Ventricular Arrhythmias"]
+    class_file = os.path.join(best_run, "classes.json")
+    if os.path.exists(class_file):
+        try:
+            with open(class_file, "r") as f:
+                saved_classes = json.load(f)
+            if len(saved_classes) == 5:
+                classes = saved_classes
+                print(f"📋 Using saved classes: {classes[:3]}...")
+        except Exception as e:
+            print(f"⚠️ Could not load classes: {e}")
+    
+    # Create ensemble
+    hybrid = HybridEnsemble(ml_models=ml_models, dl_models=dl_models, classes=classes, weights={})
+    
+    print("🧠 Predicting...")
+    try:
+        probs = hybrid.predict_proba(X_ml, X_dl)
+    except Exception as e:
+        print(f"❌ Prediction failed: {e}")
+        raise
+    
+    # Ensure 5 classes
+    if probs.shape[1] > 5:
+        probs = probs[:, :5]
+    elif probs.shape[1] < 5:
+        pad_probs = np.zeros((probs.shape[0], 5))
+        pad_probs[:, :probs.shape[1]] = probs
+        probs = pad_probs
+    
+    # Normalize
+    probs = probs / (np.sum(probs, axis=1, keepdims=True) + 1e-8)
+    
+    pred_idx = int(np.argmax(probs))
+    pred_class = classes[pred_idx] if pred_idx < len(classes) else classes[0]
+    pred_conf = float(np.max(probs))
+    
+    # Confidence threshold
+    if pred_conf < 0.4:
+        print(f"⚠️ Low confidence: {pred_conf:.3f}")
+    
+    results = {
+        "predicted_class": pred_class,
+        "confidence": round(pred_conf, 4),
+        "probabilities": {classes[i]: round(float(p), 4) for i, p in enumerate(probs[0])}
+    }
+    
+    print(json.dumps(results, indent=2))
+    return results
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python3 predict_ecg.py <path_to_pdf>")
+        sys.exit(1)
+    pdf_path = sys.argv[1]
+    predict_ecg(pdf_path)
