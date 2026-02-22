@@ -1,0 +1,55 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Data (Exclude large binary blobs)
+data/
+Valid ECG/
+backend/data/
+*.npy
+*.npz
+*.h5
+*.ckpt
+*.pdf
+*.zip
+*.jpg
+*.png
+
+# Exclude disputed research assets from repository
+assets/
+backend/src/research_outputs/
+
+# Allow trained models for deployment portability (Tracked via Git LFS)
+!backend/src/saved_models/
+!backend/src/saved_models/**
+
+# Frontend
+node_modules/
+frontend/node_modules/
+dist/
+build/
+
+# Config & Sensitive
+.env
+.env.local
+frontend/.env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Temporary
+logs/
+*.log
+tmp/
+/tmp/

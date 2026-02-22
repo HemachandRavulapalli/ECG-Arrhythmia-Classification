@@ -1,0 +1,478 @@
+{
+  "external_validation": "Kardia 6L",
+  "n_samples": 66,
+  "accuracy": 0.6515151515151515,
+  "precision": 0.2598110465116279,
+  "recall": 0.2943548387096774,
+  "macro_f1": 0.2277777777777778,
+  "class_dist": {
+    "Normal Sinus Rhythm": 62,
+    "Tachycardia": 2,
+    "Bradycardia": 1,
+    "Atrial Fibrillation": 1
+  },
+  "per_sample": [
+    {
+      "patient": "Akshaya",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Bradycardia",
+      "correct": false,
+      "confidence": 0.3637808883194016
+    },
+    {
+      "patient": "Amani",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.36118794120116104
+    },
+    {
+      "patient": "Ausha",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.35322099621901887
+    },
+    {
+      "patient": "Bhuvanesh",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3966827775780554
+    },
+    {
+      "patient": "Bindhu",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.3325882712606554
+    },
+    {
+      "patient": "Bindusri",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.41726103297081224
+    },
+    {
+      "patient": "Dhanalakshmi",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4464794653586687
+    },
+    {
+      "patient": "Divya",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3410100510348886
+    },
+    {
+      "patient": "E Rose",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4245778530036365
+    },
+    {
+      "patient": "Else Anna",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4033810797355751
+    },
+    {
+      "patient": "Gayathri",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4156104037467333
+    },
+    {
+      "patient": "Girija",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4298422696983059
+    },
+    {
+      "patient": "Harsha",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3981270235691938
+    },
+    {
+      "patient": "Hemachand",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Atrial Fibrillation",
+      "correct": false,
+      "confidence": 0.32387845582591446
+    },
+    {
+      "patient": "Hemanth",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.37963329049023453
+    },
+    {
+      "patient": "Hemasri",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4062161625177847
+    },
+    {
+      "patient": "Janani",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.41536553949624383
+    },
+    {
+      "patient": "Karishma",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.41556884565386626
+    },
+    {
+      "patient": "Kavya sree",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3708749796908803
+    },
+    {
+      "patient": "Kiran",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3801586791169586
+    },
+    {
+      "patient": "Kiran[Run]",
+      "gt": "Tachycardia",
+      "pred": "Tachycardia",
+      "correct": true,
+      "confidence": 0.3026533816913818
+    },
+    {
+      "patient": "Krishna Sai",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3954374089432691
+    },
+    {
+      "patient": "Lakshmi",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.3081418450891527
+    },
+    {
+      "patient": "Lokesh",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.41992908071943313
+    },
+    {
+      "patient": "Lowshik",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.30636666799843254
+    },
+    {
+      "patient": "Manasvi Neha",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.3612668782721931
+    },
+    {
+      "patient": "Nazeer",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.44385760601369056
+    },
+    {
+      "patient": "Neeraj",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3509183231448301
+    },
+    {
+      "patient": "Nikhila",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.3469245808508816
+    },
+    {
+      "patient": "Pavani konduru",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Atrial Fibrillation",
+      "correct": false,
+      "confidence": 0.3101512312325974
+    },
+    {
+      "patient": "Pavani sri Katyayini",
+      "gt": "Bradycardia",
+      "pred": "Atrial Fibrillation",
+      "correct": false,
+      "confidence": 0.31015378576587516
+    },
+    {
+      "patient": "Pavani",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4242075370805901
+    },
+    {
+      "patient": "Ranisri",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3946211011740574
+    },
+    {
+      "patient": "Sai Soukhya",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.3228202900204679
+    },
+    {
+      "patient": "Saikrishna",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.33485748745327687
+    },
+    {
+      "patient": "Sanjay",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.37766049291516207
+    },
+    {
+      "patient": "Saranya",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.39464679559543997
+    },
+    {
+      "patient": "Sathvik",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4337112662254853
+    },
+    {
+      "patient": "Shakira",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.27844885553194426
+    },
+    {
+      "patient": "Sharhana",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.3532130869265382
+    },
+    {
+      "patient": "Somya Reddy",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.40697135051293265
+    },
+    {
+      "patient": "Sowmya",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4115917663627842
+    },
+    {
+      "patient": "SuryaTeja",
+      "gt": "Tachycardia",
+      "pred": "Normal Sinus Rhythm",
+      "correct": false,
+      "confidence": 0.4312229335918266
+    },
+    {
+      "patient": "Tejaswini",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4156353666270821
+    },
+    {
+      "patient": "Thriveni",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Atrial Fibrillation",
+      "correct": false,
+      "confidence": 0.35207762800479553
+    },
+    {
+      "patient": "Varshitha",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.40134248404579376
+    },
+    {
+      "patient": "Vineela",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.4029393732157335
+    },
+    {
+      "patient": "Vsldeepthi",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4122761942000608
+    },
+    {
+      "patient": "Yaswanth",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.4158666965961104
+    },
+    {
+      "patient": "bhuvanapriya",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.3987001438824898
+    },
+    {
+      "patient": "deepu",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.40572395245423365
+    },
+    {
+      "patient": "gagan",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3741689397842601
+    },
+    {
+      "patient": "gowry",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3417864202078585
+    },
+    {
+      "patient": "jayasri",
+      "gt": "Atrial Fibrillation",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.3585955100644785
+    },
+    {
+      "patient": "jhansi",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.413204158210238
+    },
+    {
+      "patient": "kalavathi",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.3191878885553693
+    },
+    {
+      "patient": "keerthi",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4022017140351952
+    },
+    {
+      "patient": "khaja",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.40746384062764285
+    },
+    {
+      "patient": "nandini",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Atrial Fibrillation",
+      "correct": false,
+      "confidence": 0.3380614618458478
+    },
+    {
+      "patient": "sabeeha",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4126396374809473
+    },
+    {
+      "patient": "shajitha",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.4240537360024952
+    },
+    {
+      "patient": "simran",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Bradycardia",
+      "correct": false,
+      "confidence": 0.4187386419300363
+    },
+    {
+      "patient": "subhasheni",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Tachycardia",
+      "correct": false,
+      "confidence": 0.32601299092499214
+    },
+    {
+      "patient": "vallisravan",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.3737356466230427
+    },
+    {
+      "patient": "veera",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.38723255937221246
+    },
+    {
+      "patient": "vyshnavi",
+      "gt": "Normal Sinus Rhythm",
+      "pred": "Normal Sinus Rhythm",
+      "correct": true,
+      "confidence": 0.44014580749174526
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+# PATCH: Add /api/logs endpoint to backend/app.py
+
+# 1. Add import at the top (after other FastAPI imports):
+from fastapi.responses import PlainTextResponse
+
+# 2. Add this route after the /health endpoint:
+@app.get("/api/logs", response_class=PlainTextResponse)
+def get_logs():
+    """Serve backend training log as plain text for frontend UI"""
+    log_path = os.path.join(os.path.dirname(__file__), "logs", "train_log.txt")
+    if not os.path.exists(log_path):
+        return "No logs available."
+    with open(log_path, "r") as f:
+        return f.read()
+
+# This will allow your frontend to fetch logs from /api/logs on your Render backend.

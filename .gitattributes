@@ -1,0 +1,5 @@
+backend/src/saved_models/**/*.joblib filter=lfs diff=lfs merge=lfs -text
+backend/src/saved_models/**/*.keras filter=lfs diff=lfs merge=lfs -text
+backend/src/saved_models/**/*.h5 filter=lfs diff=lfs merge=lfs -text
+*.joblib filter=lfs diff=lfs merge=lfs -text
+*.keras filter=lfs diff=lfs merge=lfs -text

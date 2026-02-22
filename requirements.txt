@@ -1,0 +1,22 @@
+fastapi
+uvicorn
+python-multipart
+numpy
+pandas
+scikit-learn
+joblib
+opencv-python-headless
+pillow
+pymupdf
+requests
+tqdm
+pdf2image
+pdfplumber
+pywavelets
+neurokit2
+wfdb
+emd-signal
+pytesseract
+tensorflow
+imbalanced-learn
+# Add any other backend/src requirements here

@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["python310"]
+
+[phases.install]
+cmds = [
+  "python3 -m ensurepip --upgrade",
+  "python3 -m pip install --upgrade pip setuptools wheel",
+  "python3 -m pip install -r requirements.deploy.txt"
+]
+
+[start]
+cmd = "python3 app.py"
