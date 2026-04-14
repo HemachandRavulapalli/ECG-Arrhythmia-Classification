@@ -78,7 +78,7 @@ This repository includes the fully trained models (managed via Git LFS). Ensure 
 
 ## 👨‍🔬 Authors
 - **Hemachand Ravulapalli** - *Lead Researcher & Developer*
-- **Hemachand Ravulapalli** - *Researcher & Developer*
+- **Krishna Veeramallu** - *Researcher & Developer*
 
 ---
 © 2026 ECG Classification Major Project. All Rights Reserved.
